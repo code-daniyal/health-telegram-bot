@@ -202,5 +202,4 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Ошибка. Пример: 70 175 16")
             context.user_data["mode"] = None
         else:
- 
             await update.message.reply_text("Я пока не понимаю 😅\nВыбери кнопку из меню.")
