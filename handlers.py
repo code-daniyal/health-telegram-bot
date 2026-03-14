@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # handlers.py
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ContextTypes
@@ -88,7 +88,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Ошибка. Пример: 70 175 16")
             context.user_data["mode"] = None
         else:
-=======
+
 # handlers.py
 from telegram import Update, ReplyKeyboardMarkup, InputFile
 from telegram.ext import ContextTypes
@@ -202,5 +202,5 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text("Ошибка. Пример: 70 175 16")
             context.user_data["mode"] = None
         else:
->>>>>>> 29093cf4bcf2d7ee60c67f712405b99b90c1b8a1
+ 
             await update.message.reply_text("Я пока не понимаю 😅\nВыбери кнопку из меню.")
