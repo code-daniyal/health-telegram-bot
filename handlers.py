@@ -6,7 +6,6 @@ from telegram.ext import ContextTypes
 from calculations import calculate_bmi, calculate_calories
 from database import add_record, get_user_progress
 
-# --- Главное меню ---
 def main_menu():
     keyboard = [
         ["🏋️ Тренировки", "🥗 Питание"],
@@ -16,14 +15,12 @@ def main_menu():
     ]
     return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# --- Старт ---
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Привет! Я Healthy Bot 💪\nВыбери раздел:",
         reply_markup=main_menu()
     )
 
-# --- Функция для создания графика ---
 def create_bmi_chart(user_id):
     records = get_user_progress(user_id)
     if not records:
@@ -47,12 +44,10 @@ def create_bmi_chart(user_id):
     plt.close()
     return filename
 
-# --- Основной обработчик сообщений ---
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = str(update.message.from_user.id)
 
-    # --- Кнопки меню ---
     if text == "🏋️ Тренировки":
         await update.message.reply_text("Тренируйся 3-4 раза в неделю 💪")
     elif text == "🥗 Питание":
@@ -83,46 +78,35 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             os.remove(chart_file)
     elif text == "ℹ️ О боте":
         await update.message.reply_text("Healthy Bot 3.0 💪")
-    
-    # --- ОБРАБОТКА ВВОДА ЦИФР ---
     else:
         mode = context.user_data.get("mode")
-        clean_text = text.strip().replace(',', '.') # Убираем лишнее и меняем запятые на точки
+        clean_text = text.strip().replace(',', '.')
 
         if mode == "bmi":
             try:
                 parts = clean_text.split()
                 if len(parts) != 2:
                     raise ValueError
-                
                 weight = float(parts[0])
                 height_cm = float(parts[1])
-                
                 bmi_value, category, advice = calculate_bmi(weight, height_cm)
                 add_record(user_id, weight, height_cm, bmi_value)
-                
                 await update.message.reply_text(
-                    f"📊 Твой ИМТ: {bmi_value}\n"
-                    f"Категория: {category}\n"
-                    f"Совет: {advice}\n\n"
-                    "Данные сохранены 📁"
+                    f"📊 Твой ИМТ: {bmi_value}\nКатегория: {category}\nСовет: {advice}\n\nДанные сохранены 📁"
                 )
-                context.user_data["mode"] = None # Сбрасываем только если всё ок
-          except Exception as e:
-                # Бот сам напишет, почему он споткнулся
-                await update.message.reply_text(f"Произошла ошибка: {str(e)}")
-                print(f"Полная ошибка: {e}")        
-elif mode == "calories":
+                context.user_data["mode"] = None
+            except Exception as e:
+                await update.message.reply_text("Ошибка. Введи вес и рост через пробел.\nПример: 70 175")
+        elif mode == "calories":
             try:
                 parts = clean_text.split()
                 if len(parts) != 3:
                     raise ValueError
-                
                 weight, height, age = map(float, parts)
                 calories_needed = calculate_calories(weight, height, age)
                 await update.message.reply_text(f"Тебе нужно примерно {calories_needed} ккал в день 🔥")
                 context.user_data["mode"] = None
-            except:
+            except Exception as e:
                 await update.message.reply_text("Ошибка. Введи вес, рост и возраст.\nПример: 70 175 16")
         else:
             await update.message.reply_text("Я пока не понимаю 😅\nВыбери кнопку из меню.")
