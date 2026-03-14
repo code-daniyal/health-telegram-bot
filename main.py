@@ -1,8 +1,15 @@
 # main.py
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
 from handlers import start, handle_message
+import os
+from dotenv import load_dotenv
 
-TOKEN = "7581599860:AAExoEBXhDoin4z3nFF1_eXDTxt3hwgdIo4"
+load_dotenv()
+
+TOKEN = os.getenv("TOKEN")
+
+if not TOKEN:
+    raise ValueError("Ошибка: переменная окружения TOKEN не установлена!")
 
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
