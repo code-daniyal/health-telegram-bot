@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # database.py
 import json
 import os
@@ -28,7 +28,7 @@ def add_record(user_id, weight, height, bmi):
 
 def get_user_progress(user_id):
     data = load_data()
-=======
+
 # database.py
 import json
 import os
@@ -58,5 +58,4 @@ def add_record(user_id, weight, height, bmi):
 
 def get_user_progress(user_id):
     data = load_data()
->>>>>>> 29093cf4bcf2d7ee60c67f712405b99b90c1b8a1
     return data.get(user_id, [])
