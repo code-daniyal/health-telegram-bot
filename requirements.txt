@@ -4,5 +4,5 @@ matplotlib
 
 python-telegram-bot
 matplotlib
- origin/main
+
 python-dotenv
