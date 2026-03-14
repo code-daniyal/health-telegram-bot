@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # charts.py
 import matplotlib.pyplot as plt
 from database import get_user_progress
@@ -26,7 +26,7 @@ def create_bmi_chart(user_id):
     filename = f"{user_id}_progress.png"
     plt.savefig(filename)
     plt.close()
-=======
+
 # charts.py
 import matplotlib.pyplot as plt
 from database import get_user_progress
@@ -54,5 +54,4 @@ def create_bmi_chart(user_id):
     filename = f"{user_id}_progress.png"
     plt.savefig(filename)
     plt.close()
->>>>>>> 29093cf4bcf2d7ee60c67f712405b99b90c1b8a1
     return filename
