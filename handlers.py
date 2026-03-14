@@ -108,10 +108,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     "Данные сохранены 📁"
                 )
                 context.user_data["mode"] = None # Сбрасываем только если всё ок
-            except:
-                await update.message.reply_text("Ошибка. Введи вес и рост через пробел.\nПример: 70 175")
-        
-        elif mode == "calories":
+          except Exception as e:
+                # Бот сам напишет, почему он споткнулся
+                await update.message.reply_text(f"Произошла ошибка: {str(e)}")
+                print(f"Полная ошибка: {e}")        
+elif mode == "calories":
             try:
                 parts = clean_text.split()
                 if len(parts) != 3:
