@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 .env
 __pycache__/
 *.png
@@ -210,4 +210,4 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
->>>>>>> 29093cf4bcf2d7ee60c67f712405b99b90c1b8a1
+

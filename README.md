@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 \# Health Telegram Bot
 
 
@@ -59,7 +59,7 @@ python main.py
 
 
 
-=======
+
 \# Health Telegram Bot
 
 
@@ -120,4 +120,4 @@ python main.py
 
 
 
->>>>>>> 29093cf4bcf2d7ee60c67f712405b99b90c1b8a1
+
