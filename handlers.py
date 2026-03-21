@@ -1,7 +1,7 @@
 # handlers.py
 import os
 import matplotlib.pyplot as plt
-from telegram import Update, ReplyKeyboardMarkup, InputFile
+from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from calculations import calculate_bmi, calculate_calories
 from database import add_record, get_user_progress
@@ -17,7 +17,7 @@ def main_menu():
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Привет! Я Healthy Bot 💪\nВыбери раздел:",
+        "Привет! Я Healthy Bot 💪\nВыбери раздел в меню ниже:",
         reply_markup=main_menu()
     )
 
@@ -28,14 +28,12 @@ def create_bmi_chart(user_id):
     
     labels = list(range(1, len(records)+1))
     bmis = [r['bmi'] for r in records]
-    weights = [r['weight'] for r in records]
-
+    
     plt.figure(figsize=(6,4))
     plt.plot(labels, bmis, marker='o', linestyle='-', color='blue', label='ИМТ')
-    plt.plot(labels, weights, marker='s', linestyle='--', color='green', label='Вес')
-    plt.title('Прогресс пользователя')
-    plt.xlabel('Записи')
-    plt.ylabel('Значение')
+    plt.title('Твой прогресс ИМТ')
+    plt.xlabel('Номер замера')
+    plt.ylabel('ИМТ')
     plt.grid(True)
     plt.legend()
 
@@ -49,64 +47,66 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = str(update.message.from_user.id)
 
     if text == "🏋️ Тренировки":
-        await update.message.reply_text("Тренируйся 3-4 раза в неделю 💪")
+        await update.message.reply_text("Рекомендую 3 силовые тренировки в неделю и больше ходьбы!")
     elif text == "🥗 Питание":
-        await update.message.reply_text("Ешь белок, овощи и фрукты 🥗")
+        await update.message.reply_text("Старайся есть больше овощей и следи за нормой белка.")
     elif text == "😴 Сон":
-        await update.message.reply_text("Спи 8-9 часов 😴")
+        await update.message.reply_text("Сон 7-8 часов — залог быстрого восстановления.")
     elif text == "📊 Рассчитать ИМТ":
-        await update.message.reply_text("Напиши вес и рост через пробел\nПример: 70 175")
+        await update.message.reply_text("Введи свой вес (кг) и рост (см) через пробел.\nПример: 70 175")
         context.user_data["mode"] = "bmi"
     elif text == "🔥 Рассчитать калории":
-        await update.message.reply_text("Напиши вес(кг) рост(см) возраст\nПример: 70 175 16")
+        await update.message.reply_text("Введи вес, рост и возраст через пробел.\nПример: 75 180 20")
         context.user_data["mode"] = "calories"
     elif text == "📈 Мой прогресс":
         records = get_user_progress(user_id)
         if not records:
-            await update.message.reply_text("У тебя пока нет данных.")
+            await update.message.reply_text("Данных пока нет. Сначала рассчитай ИМТ!")
             return
         
-        progress_text = "📈 Твой прогресс:\n\n"
-        for i, record in enumerate(records, 1):
-            progress_text += f"{i}) Вес: {record['weight']} кг | ИМТ: {record['bmi']}\n"
-        await update.message.reply_text(progress_text)
-
-        chart_file = create_bmi_chart(user_id)
-        if chart_file and os.path.exists(chart_file):
-            with open(chart_file, "rb") as f:
-                await update.message.reply_photo(photo=f)
-            os.remove(chart_file)
+        msg = "📈 Твоя история:\n"
+        for i, r in enumerate(records, 1):
+            msg += f"{i}. Вес: {r['weight']}кг | ИМТ: {r['bmi']}\n"
+        
+        await update.message.reply_text(msg)
+        chart = create_bmi_chart(user_id)
+        if chart:
+            with open(chart, "rb") as photo:
+                await update.message.reply_photo(photo)
+            os.remove(chart)
+            
     elif text == "ℹ️ О боте":
-        await update.message.reply_text("Healthy Bot 3.0 💪")
+        await update.message.reply_text("Healthy Bot v3.0\nСоздан для отслеживания здоровья и прогресса.")
     else:
+        # Логика обработки ввода данных
         mode = context.user_data.get("mode")
-        clean_text = text.strip().replace(',', '.')
+        clean_text = text.replace(',', '.').strip()
 
         if mode == "bmi":
             try:
-                parts = clean_text.split()
-                if len(parts) != 2:
-                    raise ValueError
-                weight = float(parts[0])
-                height_cm = float(parts[1])
-                bmi_value, category, advice = calculate_bmi(weight, height_cm)
-                add_record(user_id, weight, height_cm, bmi_value)
-                await update.message.reply_text(
-                    f"📊 Твой ИМТ: {bmi_value}\nКатегория: {category}\nСовет: {advice}\n\nДанные сохранены 📁"
-                )
+                weight, height = map(float, clean_text.split())
+                bmi, cat, adv = calculate_bmi(weight, height)
+                add_record(user_id, weight, height, bmi)
+                await update.message.reply_text(f"Твой ИМТ: {bmi}\nКатегория: {cat}\n\n{adv}")
                 context.user_data["mode"] = None
-            except Exception as e:
-                await update.message.reply_text("Ошибка. Введи вес и рост через пробел.\nПример: 70 175")
+            except:
+                await update.message.reply_text("Ошибка! Введи два числа через пробел (Вес Рост).")
+
         elif mode == "calories":
             try:
-                parts = clean_text.split()
-                if len(parts) != 3:
-                    raise ValueError
-                weight, height, age = map(float, parts)
-                calories_needed = calculate_calories(weight, height, age)
-                await update.message.reply_text(f"Тебе нужно примерно {calories_needed} ккал в день 🔥")
+                weight, height, age = map(float, clean_text.split())
+                # Получаем 4 значения из нашей новой функции
+                kcal, p, f, c = calculate_calories(weight, height, age)
+                
+                res = (
+                    f"🔥 Твоя норма: {kcal} ккал\n\n"
+                    f"🧪 Баланс макронутриентов (БЖУ):\n"
+                    f"🥩 Белки: {p}г\n"
+                    f"🥑 Жиры: {f}г\n"
+                    f"🍞 Углеводы: {c}г\n\n"
+                    f"Это поможет тебе грамотно планировать рацион!"
+                )
+                await update.message.reply_text(res)
                 context.user_data["mode"] = None
-            except Exception as e:
-                await update.message.reply_text("Ошибка. Введи вес, рост и возраст.\nПример: 70 175 16")
-        else:
-            await update.message.reply_text("Я пока не понимаю 😅\nВыбери кнопку из меню.")
+            except:
+                await update.message.reply_text("Ошибка! Введи три числа (Вес Рост Возраст).")
