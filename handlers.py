@@ -1,10 +1,10 @@
-# handlers.py
 import os
 import matplotlib.pyplot as plt
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from calculations import calculate_bmi, calculate_calories
 from database import add_record, get_user_progress
+from ai_logic import get_ai_answer  # <--- ДОБАВИЛИ ИМПОРТ ИИ
 
 def main_menu():
     keyboard = [
@@ -45,7 +45,10 @@ def create_bmi_chart(user_id):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
     user_id = str(update.message.from_user.id)
+    user_data = context.user_data
+    mode = user_data.get("mode")
 
+    # --- КНОПКИ МЕНЮ ---
     if text == "🏋️ Тренировки":
         await update.message.reply_text("Рекомендую 3 силовые тренировки в неделю и больше ходьбы!")
     elif text == "🥗 Питание":
@@ -54,10 +57,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Сон 7-8 часов — залог быстрого восстановления.")
     elif text == "📊 Рассчитать ИМТ":
         await update.message.reply_text("Введи свой вес (кг) и рост (см) через пробел.\nПример: 70 175")
-        context.user_data["mode"] = "bmi"
+        user_data["mode"] = "bmi"
     elif text == "🔥 Рассчитать калории":
         await update.message.reply_text("Введи вес, рост и возраст через пробел.\nПример: 75 180 20")
-        context.user_data["mode"] = "calories"
+        user_data["mode"] = "calories"
+    elif text == "❓ Задать вопрос":
+        # Переключаем бота в режим ожидания вопроса для ИИ
+        await update.message.reply_text("Напиши свой вопрос по химии, биологии или здоровью, и я отвечу! 🧪")
+        user_data["mode"] = "ask_ai"
     elif text == "📈 Мой прогресс":
         records = get_user_progress(user_id)
         if not records:
@@ -77,25 +84,31 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
     elif text == "ℹ️ О боте":
         await update.message.reply_text("Healthy Bot v3.0\nСоздан для отслеживания здоровья и прогресса.")
+
+    # --- ОБРАБОТКА ВВОДА (ДАННЫЕ И ВОПРОСЫ) ---
     else:
-        # Логика обработки ввода данных
-        mode = context.user_data.get("mode")
         clean_text = text.replace(',', '.').strip()
 
-        if mode == "bmi":
+        # Если пользователь задает вопрос ИИ
+        if mode == "ask_ai":
+            await update.message.reply_text("🤖 Анализирую данные...")
+            answer = await get_ai_answer(text)
+            await update.message.reply_text(answer)
+            user_data["mode"] = None  # Сбрасываем режим после ответа
+
+        elif mode == "bmi":
             try:
                 weight, height = map(float, clean_text.split())
                 bmi, cat, adv = calculate_bmi(weight, height)
                 add_record(user_id, weight, height, bmi)
                 await update.message.reply_text(f"Твой ИМТ: {bmi}\nКатегория: {cat}\n\n{adv}")
-                context.user_data["mode"] = None
+                user_data["mode"] = None
             except:
                 await update.message.reply_text("Ошибка! Введи два числа через пробел (Вес Рост).")
 
         elif mode == "calories":
             try:
                 weight, height, age = map(float, clean_text.split())
-                # Получаем 4 значения из нашей новой функции
                 kcal, p, f, c = calculate_calories(weight, height, age)
                 
                 res = (
@@ -107,6 +120,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"Это поможет тебе грамотно планировать рацион!"
                 )
                 await update.message.reply_text(res)
-                context.user_data["mode"] = None
+                user_data["mode"] = None
             except:
                 await update.message.reply_text("Ошибка! Введи три числа (Вес Рост Возраст).")
+        else:
+            await update.message.reply_text("Пожалуйста, выбери пункт меню или сначала нажми «Задать вопрос».")
