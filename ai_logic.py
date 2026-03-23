@@ -18,15 +18,13 @@ def initialize_ai():
     try:
         genai.configure(api_key=GEMINI_KEY)
         
-        # Список моделей от самой легкой (Flash) до стабильной (Pro 1.0)
-        # Flash обычно имеет больше бесплатных запросов в минуту
         priority_models = [
             'gemini-1.5-flash',
-            'gemini-1.5-flash-latest',
+            'gemini-1.5-flash-8b',  # Добавили мини-версию
+            'gemini-1.5-pro',       # Добавили тяжелую версию
             'gemini-1.0-pro',
-            'gemini-pro'
-        ]
-        
+            'text-embedding-004'    # Иногда это помогает "пробить" соединение
+        ]        
         print("🔍 Калибровка научного модуля...")
         
         for m_name in priority_models:
