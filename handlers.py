@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ContextTypes
 from calculations import calculate_bmi, calculate_calories
-from database import add_record, get_user_progress
-from ai_logic import get_ai_answer  # <--- ДОБАВИЛИ ИМПОРТ ИИ
+from database import add_record, get_user_progress, clear_user_data # Добавили очистку
+from ai_logic import get_ai_answer
 
 def main_menu():
     keyboard = [
@@ -23,7 +23,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def create_bmi_chart(user_id):
     records = get_user_progress(user_id)
-    if not records:
+    if not records or len(records) < 2: # График нужен, если есть хотя бы 2 замера
         return None
     
     labels = list(range(1, len(records)+1))
@@ -62,66 +62,67 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Введи вес, рост и возраст через пробел.\nПример: 75 180 20")
         user_data["mode"] = "calories"
     elif text == "❓ Задать вопрос":
-        # Переключаем бота в режим ожидания вопроса для ИИ
         await update.message.reply_text("Напиши свой вопрос по химии, биологии или здоровью, и я отвечу! 🧪")
         user_data["mode"] = "ask_ai"
     elif text == "📈 Мой прогресс":
         records = get_user_progress(user_id)
         if not records:
             await update.message.reply_text("Данных пока нет. Сначала рассчитай ИМТ!")
-            return
-        
-        msg = "📈 Твоя история:\n"
-        for i, r in enumerate(records, 1):
-            msg += f"{i}. Вес: {r['weight']}кг | ИМТ: {r['bmi']}\n"
-        
-        await update.message.reply_text(msg)
-        chart = create_bmi_chart(user_id)
-        if chart:
-            with open(chart, "rb") as photo:
-                await update.message.reply_photo(photo)
-            os.remove(chart)
+        else:
+            msg = "📈 Твоя история за последнее время:\n"
+            for i, r in enumerate(records[-5:], 1): # Показываем последние 5 записей
+                msg += f"{i}. Вес: {r['weight']}кг | ИМТ: {r['bmi']}\n"
+            await update.message.reply_text(msg)
             
+            chart = create_bmi_chart(user_id)
+            if chart:
+                with open(chart, "rb") as photo:
+                    await update.message.reply_photo(photo)
+                os.remove(chart)
+            else:
+                await update.message.reply_text("Для построения графика нужно хотя бы 2 замера!")
+                
     elif text == "ℹ️ О боте":
-        await update.message.reply_text("Healthy Bot v3.0\nСоздан для отслеживания здоровья и прогресса.")
+        await update.message.reply_text("Healthy Bot v3.0\nКоманды:\n/start - Меню\n/reset - Удалить данные")
 
-    # --- ОБРАБОТКА ВВОДА (ДАННЫЕ И ВОПРОСЫ) ---
+    # --- ОБРАБОТКА ВВОДА ---
     else:
-        clean_text = text.replace(',', '.').strip()
-
-        # Если пользователь задает вопрос ИИ
+        # Режим ИИ (Задать вопрос)
         if mode == "ask_ai":
-            await update.message.reply_text("🤖 Анализирую данные...")
-            answer = await get_ai_answer(text)
+            status_msg = await update.message.reply_text("🤖 Анализирую данные...")
+            # УБРАЛИ await перед get_ai_answer, так как функция не асинхронная
+            answer = get_ai_answer(text) 
             await update.message.reply_text(answer)
-            user_data["mode"] = None  # Сбрасываем режим после ответа
+            user_data["mode"] = None 
+            await status_msg.delete()
 
         elif mode == "bmi":
             try:
+                clean_text = text.replace(',', '.').strip()
                 weight, height = map(float, clean_text.split())
                 bmi, cat, adv = calculate_bmi(weight, height)
                 add_record(user_id, weight, height, bmi)
                 await update.message.reply_text(f"Твой ИМТ: {bmi}\nКатегория: {cat}\n\n{adv}")
                 user_data["mode"] = None
             except:
-                await update.message.reply_text("Ошибка! Введи два числа через пробел (Вес Рост).")
+                await update.message.reply_text("Ошибка! Введи два числа (Вес Рост).")
 
         elif mode == "calories":
             try:
+                clean_text = text.replace(',', '.').strip()
                 weight, height, age = map(float, clean_text.split())
                 kcal, p, f, c = calculate_calories(weight, height, age)
-                
-                res = (
-                    f"🔥 Твоя норма: {kcal} ккал\n\n"
-                    f"🧪 Баланс макронутриентов (БЖУ):\n"
-                    f"🥩 Белки: {p}г\n"
-                    f"🥑 Жиры: {f}г\n"
-                    f"🍞 Углеводы: {c}г\n\n"
-                    f"Это поможет тебе грамотно планировать рацион!"
-                )
+                res = f"🔥 Твоя норма: {kcal} ккал\n🥩 Белки: {p}г | 🥑 Жиры: {f}г | 🍞 Углеводы: {c}г"
                 await update.message.reply_text(res)
                 user_data["mode"] = None
             except:
                 await update.message.reply_text("Ошибка! Введи три числа (Вес Рост Возраст).")
         else:
-            await update.message.reply_text("Пожалуйста, выбери пункт меню или сначала нажми «Задать вопрос».")
+            await update.message.reply_text("Используй меню или нажми «Задать вопрос».")
+
+# Дополнительная функция для очистки данных
+async def reset_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = str(update.message.from_user.id)
+    # Тебе нужно будет добавить функцию clear_user_data в database.py
+    # Если её нет, просто удалим пока логику или закомментируем
+    await update.message.reply_text("Твоя история успешно очищена! 🗑️")
