@@ -11,7 +11,7 @@ def get_ai_answer(question):
     try:
         # Используем современную модель Llama-3.3
         completion = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="llama3-8b-8192",
             messages=[
                 {"role": "system", "content": "Ты — помощник в Healthy Bot. Помогаешь пользователю с вопросами по химии, биологии и здоровью. Отвечай кратко и только на русском языке."},
                 {"role": "user", "content": question}
