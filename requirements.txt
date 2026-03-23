@@ -2,7 +2,5 @@
 python-telegram-bot
 matplotlib
 flask
-python-telegram-bot
-matplotlib
-
 python-dotenv
+google-generativeai
